@@ -1,548 +1,330 @@
 <?php
-/**
- * Boilerplate functions and definitions
- *
- * Sets up the theme and provides some helper functions. Some helper functions
- * are used in the theme as custom template tags. Others are attached to action and
- * filter hooks in WordPress to change core functionality.
- *
- * The first function, boilerplate_setup(), sets up the theme by registering support
- * for various features in WordPress, such as post thumbnails, navigation menus, and the like.
- *
- * When using a child theme (see http://codex.wordpress.org/Theme_Development and
- * http://codex.wordpress.org/Child_Themes), you can override certain functions
- * (those wrapped in a function_exists() call) by defining them first in your child theme's
- * functions.php file. The child theme's functions.php file is included before the parent
- * theme's file, so the child theme functions would be used.
- *
- * Functions that are not pluggable (not wrapped in function_exists()) are instead attached
- * to a filter or action hook. The hook can be removed by using remove_action() or
- * remove_filter() and you can attach your own function to the hook.
- *
- * We can remove the parent theme's hook only after it is attached, which means we need to
- * wait until setting up the child theme:
- *
- * <code>
- * add_action( 'after_setup_theme', 'my_child_theme_setup' );
- * function my_child_theme_setup() {
- *     // We are providing our own filter for excerpt_length (or using the unfiltered value)
- *     remove_filter( 'excerpt_length', 'boilerplate_excerpt_length' );
- *     ...
- * }
- * </code>
- *
- * For more information on hooks, actions, and filters, see http://codex.wordpress.org/Plugin_API.
- *
- * @package WordPress
- * @subpackage Boilerplate
- * @since Boilerplate 1.0
- */
 
-/**
- * Set the content width based on the theme's design and stylesheet.
- *
- * Used to set the width of images and content. Should be equal to the width the theme
- * is designed for, generally via the style.css stylesheet.
- */
-if ( ! isset( $content_width ) )
-	$content_width = 640;
+add_action( 'after_setup_theme', 'theme_setup' );
+add_action( 'init', 'widgets_init' );
+add_action('admin_head', 'load_theme_scripts');
+add_action('init', 'register_custom_menu');
+add_action( 'load-post.php', 'wp_svbtle_post_meta_boxes_setup' );
+add_action( 'load-post-new.php', 'wp_svbtle_post_meta_boxes_setup' );
 
-/** Tell WordPress to run boilerplate_setup() when the 'after_setup_theme' hook is run. */
-add_action( 'after_setup_theme', 'boilerplate_setup' );
+// Coming...
+// include('vendor/UCF-Theme-Updater/updater.php');
 
-if ( ! function_exists( 'boilerplate_setup' ) ):
-/**
- * Sets up theme defaults and registers support for various WordPress features.
- *
- * Note that this function is hooked into the after_setup_theme hook, which runs
- * before the init hook. The init hook is too late for some features, such as indicating
- * support post thumbnails.
- *
- * To override boilerplate_setup() in a child theme, add your own boilerplate_setup to your child theme's
- * functions.php file.
- *
- * @uses add_theme_support() To add support for post thumbnails and automatic feed links.
- * @uses register_nav_menus() To add support for navigation menus.
- * @uses add_custom_background() To add support for a custom background.
- * @uses add_editor_style() To style the visual editor.
- * @uses load_theme_textdomain() For translation/localization support.
- * @uses add_custom_image_header() To add support for a custom header.
- * @uses register_default_headers() To register the default custom header images provided with the theme.
- * @uses set_post_thumbnail_size() To set a custom post thumbnail size.
- *
- * @since Twenty Ten 1.0
- */
-function boilerplate_setup() {
-
-	// This theme styles the visual editor with editor-style.css to match the theme style.
-	add_editor_style();
-
-	// Uncomment if you choose to use post thumbnails; add the_post_thumbnail() wherever thumbnail should appear
-	//add_theme_support( 'post-thumbnails' );
-
-	// Add default posts and comments RSS feed links to head
-	add_theme_support( 'automatic-feed-links' );
-
-	// Make theme available for translation
-	// Translations can be filed in the /languages/ directory
-	load_theme_textdomain( 'boilerplate', TEMPLATEPATH . '/languages' );
-
-	$locale = get_locale();
-	$locale_file = TEMPLATEPATH . "/languages/$locale.php";
-	if ( is_readable( $locale_file ) )
-		require_once( $locale_file );
-
-	// This theme uses wp_nav_menu() in one location.
-	register_nav_menus( array(
-		'primary' => __( 'Primary Navigation', 'boilerplate' ),
-	) );
-
-	// This theme allows users to set a custom background
-	add_custom_background();
-
-	// Your changeable header business starts here
-	define( 'HEADER_TEXTCOLOR', '' );
-	// No CSS, just IMG call. The %s is a placeholder for the theme template directory URI.
-	define( 'HEADER_IMAGE', '%s/images/headers/path.jpg' );
-
-	// The height and width of your custom header. You can hook into the theme's own filters to change these values.
-	// Add a filter to boilerplate_header_image_width and boilerplate_header_image_height to change these values.
-	define( 'HEADER_IMAGE_WIDTH', apply_filters( 'boilerplate_header_image_width', 940 ) );
-	define( 'HEADER_IMAGE_HEIGHT', apply_filters( 'boilerplate_header_image_height', 198 ) );
-
-	// We'll be using post thumbnails for custom header images on posts and pages.
-	// We want them to be 940 pixels wide by 198 pixels tall.
-	// Larger images will be auto-cropped to fit, smaller ones will be ignored. See header.php.
-	set_post_thumbnail_size( HEADER_IMAGE_WIDTH, HEADER_IMAGE_HEIGHT, true );
-
-	// Don't support text inside the header image.
-	define( 'NO_HEADER_TEXT', true );
-
-	// Add a way for the custom header to be styled in the admin panel that controls
-	// custom headers. See boilerplate_admin_header_style(), below.
-	add_custom_image_header( '', 'boilerplate_admin_header_style' );
-
-	// ... and thus ends the changeable header business.
-
-	// Default custom headers packaged with the theme. %s is a placeholder for the theme template directory URI.
-	register_default_headers( array(
-		'berries' => array(
-			'url' => '%s/images/headers/starkers.png',
-			'thumbnail_url' => '%s/images/headers/starkers-thumbnail.png',
-			/* translators: header image description */
-			'description' => __( 'Boilerplate', 'boilerplate' )
-		)
-	) );
-}
-endif;
-
-if ( ! function_exists( 'boilerplate_admin_header_style' ) ) :
-/**
- * Styles the header image displayed on the Appearance > Header admin panel.
- *
- * Referenced via add_custom_image_header() in boilerplate_setup().
- *
- * @since Twenty Ten 1.0
- */
-function boilerplate_admin_header_style() {
-?>
-<style type="text/css">
-/* Shows the same border as on front end */
-#headimg {
-	border-bottom: 1px solid #000;
-	border-top: 4px solid #000;
-}
-/* If NO_HEADER_TEXT is false, you would style the text with these selectors:
-	#headimg #name { }
-	#headimg #desc { }
-*/
-</style>
-<?php
-}
-endif;
-
-/**
- * Makes some changes to the <title> tag, by filtering the output of wp_title().
- *
- * If we have a site description and we're viewing the home page or a blog posts
- * page (when using a static front page), then we will add the site description.
- *
- * If we're viewing a search result, then we're going to recreate the title entirely.
- * We're going to add page numbers to all titles as well, to the middle of a search
- * result title and the end of all other titles.
- *
- * The site title also gets added to all titles.
- *
- * @since Twenty Ten 1.0
- *
- * @param string $title Title generated by wp_title()
- * @param string $separator The separator passed to wp_title(). Twenty Ten uses a
- * 	vertical bar, "|", as a separator in header.php.
- * @return string The new title, ready for the <title> tag.
- */
-function boilerplate_filter_wp_title( $title, $separator ) {
-	// Don't affect wp_title() calls in feeds.
-	if ( is_feed() )
-		return $title;
-
-	// The $paged global variable contains the page number of a listing of posts.
-	// The $page global variable contains the page number of a single post that is paged.
-	// We'll display whichever one applies, if we're not looking at the first page.
-	global $paged, $page;
-
-	if ( is_search() ) {
-		// If we're a search, let's start over:
-		$title = sprintf( __( 'Search results for %s', 'boilerplate' ), '"' . get_search_query() . '"' );
-		// Add a page number if we're on page 2 or more:
-		if ( $paged >= 2 )
-			$title .= " $separator " . sprintf( __( 'Page %s', 'boilerplate' ), $paged );
-		// Add the site name to the end:
-		$title .= " $separator " . get_bloginfo( 'name', 'display' );
-		// We're done. Let's send the new title back to wp_title():
-		return $title;
-	}
-
-	// Otherwise, let's start by adding the site name to the end:
-	$title .= get_bloginfo( 'name', 'display' );
-
-	// If we have a site description and we're on the home/front page, add the description:
-	$site_description = get_bloginfo( 'description', 'display' );
-	if ( $site_description && ( is_home() || is_front_page() ) )
-		$title .= " $separator " . $site_description;
-
-	// Add a page number if necessary:
-	if ( $paged >= 2 || $page >= 2 )
-		$title .= " $separator " . sprintf( __( 'Page %s', 'boilerplate' ), max( $paged, $page ) );
-
-	// Return the new title to wp_title():
-	return $title;
-}
-add_filter( 'wp_title', 'boilerplate_filter_wp_title', 10, 2 );
-
-/**
- * Get our wp_nav_menu() fallback, wp_page_menu(), to show a home link.
- *
- * To override this in a child theme, remove the filter and optionally add
- * your own function tied to the wp_page_menu_args filter hook.
- *
- * @since Twenty Ten 1.0
- */
-function boilerplate_page_menu_args( $args ) {
-	$args['show_home'] = true;
-	return $args;
-}
-add_filter( 'wp_page_menu_args', 'boilerplate_page_menu_args' );
-
-/**
- * Sets the post excerpt length to 40 characters.
- *
- * To override this length in a child theme, remove the filter and add your own
- * function tied to the excerpt_length filter hook.
- *
- * @since Twenty Ten 1.0
- * @return int
- */
-function boilerplate_excerpt_length( $length ) {
-	return 40;
-}
-add_filter( 'excerpt_length', 'boilerplate_excerpt_length' );
-
-/**
- * Returns a "Continue Reading" link for excerpts
- *
- * @since Twenty Ten 1.0
- * @return string "Continue Reading" link
- */
-function boilerplate_continue_reading_link() {
-	return ' <a href="'. get_permalink() . '">' . __( 'Continue reading <span class="meta-nav">&rarr;</span>', 'boilerplate' ) . '</a>';
-}
-
-/**
- * Replaces "[...]" (appended to automatically generated excerpts) with an ellipsis and boilerplate_continue_reading_link().
- *
- * To override this in a child theme, remove the filter and add your own
- * function tied to the excerpt_more filter hook.
- *
- * @since Twenty Ten 1.0
- * @return string An ellipsis
- */
-function boilerplate_auto_excerpt_more( $more ) {
-	return ' &hellip;' . boilerplate_continue_reading_link();
-}
-add_filter( 'excerpt_more', 'boilerplate_auto_excerpt_more' );
-
-/**
- * Adds a pretty "Continue Reading" link to custom post excerpts.
- *
- * To override this link in a child theme, remove the filter and add your own
- * function tied to the get_the_excerpt filter hook.
- *
- * @since Twenty Ten 1.0
- * @return string Excerpt with a pretty "Continue Reading" link
- */
-function boilerplate_custom_excerpt_more( $output ) {
-	if ( has_excerpt() && ! is_attachment() ) {
-		$output .= boilerplate_continue_reading_link();
-	}
-	return $output;
-}
-add_filter( 'get_the_excerpt', 'boilerplate_custom_excerpt_more' );
-
-/**
- * Remove inline styles printed when the gallery shortcode is used.
- *
- * Galleries are styled by the theme in Twenty Ten's style.css.
- *
- * @since Twenty Ten 1.0
- * @return string The gallery style filter, with the styles themselves removed.
- */
-function boilerplate_remove_gallery_css( $css ) {
-	return preg_replace( "#<style type='text/css'>(.*?)</style>#s", '', $css );
-}
-add_filter( 'gallery_style', 'boilerplate_remove_gallery_css' );
-
-if ( ! function_exists( 'boilerplate_comment' ) ) :
-/**
- * Template for comments and pingbacks.
- *
- * To override this walker in a child theme without modifying the comments template
- * simply create your own boilerplate_comment(), and that function will be used instead.
- *
- * Used as a callback by wp_list_comments() for displaying the comments.
- *
- * @since Twenty Ten 1.0
- */
-function boilerplate_comment( $comment, $args, $depth ) {
-	$GLOBALS['comment'] = $comment;
-	switch ( $comment->comment_type ) :
-		case '' :
-	?>
-	<li <?php comment_class(); ?> id="li-comment-<?php comment_ID(); ?>">
-		<article id="comment-<?php comment_ID(); ?>">
-			<div class="comment-author vcard">
-				<?php echo get_avatar( $comment, 40 ); ?>
-				<?php printf( __( '%s <span class="says">says:</span>', 'boilerplate' ), sprintf( '<cite class="fn">%s</cite>', get_comment_author_link() ) ); ?>
-			</div><!-- .comment-author .vcard -->
-			<?php if ( $comment->comment_approved == '0' ) : ?>
-				<em><?php _e( 'Your comment is awaiting moderation.', 'boilerplate' ); ?></em>
-				<br />
-			<?php endif; ?>
-			<footer class="comment-meta commentmetadata"><a href="<?php echo esc_url( get_comment_link( $comment->comment_ID ) ); ?>">
-				<?php
-					/* translators: 1: date, 2: time */
-					printf( __( '%1$s at %2$s', 'boilerplate' ), get_comment_date(),  get_comment_time() ); ?></a><?php edit_comment_link( __( '(Edit)', 'boilerplate' ), ' ' );
-				?>
-			</footer><!-- .comment-meta .commentmetadata -->
-			<div class="comment-body"><?php comment_text(); ?></div>
-			<div class="reply">
-				<?php comment_reply_link( array_merge( $args, array( 'depth' => $depth, 'max_depth' => $args['max_depth'] ) ) ); ?>
-			</div><!-- .reply -->
-		</article><!-- #comment-##  -->
-	<?php
-			break;
-		case 'pingback'  :
-		case 'trackback' :
-	?>
-	<li class="post pingback">
-		<p><?php _e( 'Pingback:', 'boilerplate' ); ?> <?php comment_author_link(); ?><?php edit_comment_link( __('(Edit)', 'boilerplate'), ' ' ); ?></p>
-	<?php
-			break;
-	endswitch;
-}
-endif;
-
-/**
- * Register widgetized areas, including two sidebars and four widget-ready columns in the footer.
- *
- * To override boilerplate_widgets_init() in a child theme, remove the action hook and add your own
- * function tied to the init hook.
- *
- * @since Twenty Ten 1.0
- * @uses register_sidebar
- */
-function boilerplate_widgets_init() {
-	// Area 1, located at the top of the sidebar.
-	register_sidebar( array(
-		'name' => __( 'Primary Widget Area', 'boilerplate' ),
-		'id' => 'primary-widget-area',
-		'description' => __( 'The primary widget area', 'boilerplate' ),
-		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => '</li>',
-		'before_title' => '<h3 class="widget-title">',
-		'after_title' => '</h3>',
-	) );
-
-	// Area 2, located below the Primary Widget Area in the sidebar. Empty by default.
-	register_sidebar( array(
-		'name' => __( 'Secondary Widget Area', 'boilerplate' ),
-		'id' => 'secondary-widget-area',
-		'description' => __( 'The secondary widget area', 'boilerplate' ),
-		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => '</li>',
-		'before_title' => '<h3 class="widget-title">',
-		'after_title' => '</h3>',
-	) );
-
-	// Area 3, located in the footer. Empty by default.
-	register_sidebar( array(
-		'name' => __( 'First Footer Widget Area', 'boilerplate' ),
-		'id' => 'first-footer-widget-area',
-		'description' => __( 'The first footer widget area', 'boilerplate' ),
-		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => '</li>',
-		'before_title' => '<h3 class="widget-title">',
-		'after_title' => '</h3>',
-	) );
-
-	// Area 4, located in the footer. Empty by default.
-	register_sidebar( array(
-		'name' => __( 'Second Footer Widget Area', 'boilerplate' ),
-		'id' => 'second-footer-widget-area',
-		'description' => __( 'The second footer widget area', 'boilerplate' ),
-		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => '</li>',
-		'before_title' => '<h3 class="widget-title">',
-		'after_title' => '</h3>',
-	) );
-
-	// Area 5, located in the footer. Empty by default.
-	register_sidebar( array(
-		'name' => __( 'Third Footer Widget Area', 'boilerplate' ),
-		'id' => 'third-footer-widget-area',
-		'description' => __( 'The third footer widget area', 'boilerplate' ),
-		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => '</li>',
-		'before_title' => '<h3 class="widget-title">',
-		'after_title' => '</h3>',
-	) );
-
-	// Area 6, located in the footer. Empty by default.
-	register_sidebar( array(
-		'name' => __( 'Fourth Footer Widget Area', 'boilerplate' ),
-		'id' => 'fourth-footer-widget-area',
-		'description' => __( 'The fourth footer widget area', 'boilerplate' ),
-		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => '</li>',
-		'before_title' => '<h3 class="widget-title">',
-		'after_title' => '</h3>',
-	) );
-}
-/** Register sidebars by running boilerplate_widgets_init() on the widgets_init hook. */
-add_action( 'widgets_init', 'boilerplate_widgets_init' );
-
-/**
- * Removes the default styles that are packaged with the Recent Comments widget.
- *
- * To override this in a child theme, remove the filter and optionally add your own
- * function tied to the widgets_init action hook.
- *
- * @since Twenty Ten 1.0
- */
-function boilerplate_remove_recent_comments_style() {
-	global $wp_widget_factory;
-	remove_action( 'wp_head', array( $wp_widget_factory->widgets['WP_Widget_Recent_Comments'], 'recent_comments_style' ) );
-}
-add_action( 'widgets_init', 'boilerplate_remove_recent_comments_style' );
-
-if ( ! function_exists( 'boilerplate_posted_on' ) ) :
-/**
- * Prints HTML with meta information for the current post—date/time and author.
- *
- * @since Twenty Ten 1.0
- */
-function boilerplate_posted_on() {
-	// BP: slight modification to Twenty Ten function, converting single permalink to multi-archival link
-	// Y = 2012
-	// F = September
-	// m = 01–12
-	// j = 1–31
-	// d = 01–31
-	// printf( __( '<span class="%1$s">Posted on</span> <span class="entry-date">%2$s %3$s %4$s</span> <span class="meta-sep">by</span> %5$s', 'boilerplate' ),
-
-	printf( __( '<span class="entry-date">%2$s %3$s %4$s</span>', 'boilerplate' ),
-		// %1$s = container class
-		'meta-prep meta-prep-author',
-		// %2$s = month: /yyyy/mm/
-		sprintf( '%3$s',
-			home_url() . '/' . get_the_date( 'Y' ) . '/' . get_the_date( 'm' ) . '/',
-			esc_attr( 'View Archives for ' . get_the_date( 'F' ) . ' ' . get_the_date( 'Y' ) ),
-			get_the_date( 'F' )
-		),
-		// %3$s = day: /yyyy/mm/dd/
-		sprintf( '%3$s',
-			home_url() . '/' . get_the_date( 'Y' ) . '/' . get_the_date( 'm' ) . '/' . get_the_date( 'd' ) . '/',
-			esc_attr( 'View Archives for ' . get_the_date( 'F' ) . ' ' . get_the_date( 'j' ) . ' ' . get_the_date( 'Y' ) ),
-			get_the_date( 'j' )
-		),
-		// %4$s = year: /yyyy/
-		sprintf( '%3$s',
-			home_url() . '/' . get_the_date( 'Y' ) . '/',
-			esc_attr( 'View Archives for ' . get_the_date( 'Y' ) ),
-			get_the_date( 'Y' )
-		),
-		// %5$s = author vcard
-		sprintf( '<span class="author vcard"><a class="url fn n" href="%1$s" title="%2$s">%3$s</a></span>',
-			get_author_posts_url( get_the_author_meta( 'ID' ) ),
-			sprintf( esc_attr__( 'View all posts by %s', 'boilerplate' ), get_the_author() ),
-			get_the_author()
-		)
-	);
-}
-endif;
-
-if ( ! function_exists( 'boilerplate_posted_in' ) ) :
-/**
- * Prints HTML with meta information for the current post (category, tags and permalink).
- *
- * @since Twenty Ten 1.0
- */
-function boilerplate_posted_in() {
-	// Retrieves tag list of current post, separated by commas.
-	$tag_list = get_the_tag_list( '', ', ' );
-	if ( $tag_list ) {
-		$posted_in = __( 'This entry was posted in %1$s and tagged %2$s. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'boilerplate' );
-	} elseif ( is_object_in_taxonomy( get_post_type(), 'category' ) ) {
-		$posted_in = __( 'This entry was posted in %1$s. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'boilerplate' );
+function theme_setup() {
+	global $wp_version;
+	if (version_compare($wp_version, '3.4' , '>=')){ 
+		add_theme_support( 'custom-header', array(
+			// Header image default
+			'default-image'			=> get_template_directory_uri() . '/images/icons/bolt_large.png',
+			'header-text'			=> false,
+			'default-text-color'		=> '000',
+			'width'				=> '100',
+			'flex-width'                    => true,
+			'height'			=> '100',
+			'flex-height'                   => true,
+			'random-default'		=> true,
+			'wp-head-callback'		=> 'theme_header_style',
+			'admin-head-callback'		=> 'theme_admin_header_style',
+			'admin-preview-callback'	=> 'theme_admin_header_image'
+		) );
 	} else {
-		$posted_in = __( 'Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'boilerplate' );
+		add_theme_support( 'custom-header', array( 'random-default' => true ) );
+		//WP Custom Header - random roation by default
+		define( 'HEADER_TEXTCOLOR', '' );
+		define( 'HEADER_IMAGE', '%s/images/icons/bolt_large.png' );
+		define( 'HEADER_IMAGE_HEIGHT', '100' );
+		define( 'HEADER_IMAGE_WIDTH', '100' );
+		define('NO_HEADER_TEXT', true );
+		add_custom_image_header( 'theme_header_style', 'theme_admin_header_style', 'theme_admin_header_image' );
 	}
-	// Prints the string, replacing the placeholders.
-	printf(
-		$posted_in,
-		get_the_category_list( ', ' ),
-		$tag_list,
-		get_permalink(),
-		the_title_attribute( 'echo=0' )
+	register_default_headers( array(
+		'atom' => array(
+			'url' => '%s/images/icons/atom_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/atom.png',
+			'description' => 'atom'
+		),
+		'bear' => array(
+			'url' => '%s/images/icons/bear_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/bear.png',
+			'description' => 'bear'
+		),
+		'bolt' => array(
+			'url' => '%s/images/icons/bolt_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/bolt.png',
+			'description' => 'bolt'
+		),
+		'bullhorn' => array(
+			'url' => '%s/images/icons/bullhorn_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/bullhorn.png',
+			'description' => 'bullhorn'
+		),
+		'business_man' => array(
+			'url' => '%s/images/icons/business_man_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/business_man.png',
+			'description' => 'business_man'
+		),
+		'cassette' => array(
+			'url' => '%s/images/icons/cassette_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/cassette.png',
+			'description' => 'cassette'
+		),
+		'cell_phone' => array(
+			'url' => '%s/images/icons/cell_phone_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/cell_phone.png',
+			'description' => 'cell_phone'
+		),
+		'chain_link' => array(
+			'url' => '%s/images/icons/chain_link_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/chain_link.png',
+			'description' => 'chain_link'
+		),
+		'coffee' => array(
+			'url' => '%s/images/icons/coffee_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/coffee.png',
+			'description' => 'coffee'
+		),
+		'cog_head' => array(
+			'url' => '%s/images/icons/cog_head_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/cog_head.png',
+			'description' => 'cog_head'
+		),
+		'day_night' => array(
+			'url' => '%s/images/icons/day_night_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/day_night.png',
+			'description' => 'day_night'
+		),
+		'disapprove' => array(
+			'url' => '%s/images/icons/disapprove_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/disapprove.png',
+			'description' => 'disapprove'
+		),
+		'dog' => array(
+			'url' => '%s/images/icons/dog_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/dog.png',
+			'description' => 'dog'
+		),
+		'eye' => array(
+			'url' => '%s/images/icons/eye_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/eye.png',
+			'description' => 'eye'
+		),
+		'film' => array(
+			'url' => '%s/images/icons/film_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/film.png',
+			'description' => 'film'
+		),
+		'flask' => array(
+			'url' => '%s/images/icons/flask_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/flask.png',
+			'description' => 'flask'
+		),
+		'ghost' => array(
+			'url' => '%s/images/icons/ghost_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/ghost.png',
+			'description' => 'ghost'
+		),
+		'glasses' => array(
+			'url' => '%s/images/icons/glasses_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/glasses.png',
+			'description' => 'glasses'
+		),
+		'hat' => array(
+			'url' => '%s/images/icons/hat_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/hat.png',
+			'description' => 'hat'
+		),
+		'heart' => array(
+			'url' => '%s/images/icons/heart_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/heart.png',
+			'description' => 'heart'
+		),
+		'infection' => array(
+			'url' => '%s/images/icons/infection_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/infection.png',
+			'description' => 'infection'
+		),
+		'infinity' => array(
+			'url' => '%s/images/icons/infinity_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/infinity.png',
+			'description' => 'infinity'
+		),
+		'iphone' => array(
+			'url' => '%s/images/icons/iphone_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/iphone.png',
+			'description' => 'iphone'
+		),
+		'like' => array(
+			'url' => '%s/images/icons/like_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/like.png',
+			'description' => 'like'
+		),
+		'man_stairs' => array(
+			'url' => '%s/images/icons/man_stairs_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/man_stairs.png',
+			'description' => 'man_stairs'
+		),
+		'mine_cross' => array(
+			'url' => '%s/images/icons/mine_cross_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/mine_cross.png',
+			'description' => 'mine_cross'
+		),
+		'motorcycle' => array(
+			'url' => '%s/images/icons/motorcycle_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/motorcycle.png',
+			'description' => 'motorcycle'
+		),
+		'no_smoking' => array(
+			'url' => '%s/images/icons/no_smoking_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/no_smoking.png',
+			'description' => 'no_smoking'
+		),
+		'pan_ui' => array(
+			'url' => '%s/images/icons/pan_ui_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/pan_ui.png',
+			'description' => 'pan_ui'
+		),
+		'radio' => array(
+			'url' => '%s/images/icons/radio_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/radio.png',
+			'description' => 'radio'
+		),
+		'paperplane' => array(
+			'url' => '%s/images/icons/paperplane_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/paperplane.png',
+			'description' => 'radio'
+		),
+		'robot_square' => array(
+			'url' => '%s/images/icons/robot_square_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/robot_square.png',
+			'description' => 'robot_square'
+		),
+		'soccer_shoe' => array(
+			'url' => '%s/images/icons/soccer_shoe_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/soccer_shoe.png',
+			'description' => 'soccer_shoe'
+		),
+		'automobile' => array(
+			'url' => '%s/images/icons/automobile_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/automobile.png',
+			'description' => 'automobile'
+		),
+		'guitar' => array(
+			'url' => '%s/images/icons/guitar_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/guitar.png',
+			'description' => 'guitar'
+		),
+		'acting' => array(
+			'url' => '%s/images/icons/acting_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/acting.png',
+			'description' => 'acting'
+		),
+		'cloudrain' => array(
+			'url' => '%s/images/icons/cloudrain_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/cloudrain.png',
+			'description' => 'cloudrain'
+		),
+		'whale' => array(
+			'url' => '%s/images/icons/whale_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/whale.png',
+			'description' => 'whale'
+		),
+		'money' => array(
+			'url' => '%s/images/icons/money_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/money.png',
+			'description' => 'money'
+		),
+		'sunrise' => array(
+			'url' => '%s/images/icons/sunrise_large.png',
+			'thumbnail_url' => '%s/images/icons/thumbs/sunrise.png',
+			'description' => 'sunrise'
+		)
+	) );
+}
+
+function widgets_init() {
+	register_sidebar(array(
+		'name' => __( 'Sidebar', 's' ),
+		'id' => 'sidebar',
+		'before_widget' => '',
+		'after_widget' => '',
+		'before_title' => '<span class="hidden">',
+		'after_title' => '</span>',
+	));
+}
+
+function theme_header_style() {
+    ?><style type="text/css">
+figure.logo a, aside#logo div a, aside.kudo.complete span.circle{background-image: url(<?php header_image(); ?>);}
+    </style><?php
+}
+function theme_admin_header_style() {
+    ?><style type="text/css">
+		aside#logo div a,aside.kudo.complete span.circle{background-image: url(<?php header_image(); ?>);}
+    </style><?php
+}
+function theme_admin_header_image() {
+   	?><div style="display:inline-block;height:50px;background-color:#000;"><img src=<?php header_image(); ?> height="50px"></div>
+    <?php
+}
+
+function register_custom_menu() {
+	register_nav_menu( 'primary', __( 'Svbtle Menu') );
+}
+
+require_once ( get_template_directory() . '/theme-options.php' );
+
+
+
+
+function load_theme_scripts() {
+    wp_enqueue_style( 'farbtastic' );
+    wp_enqueue_script( 'farbtastic' );
+}
+
+function wp_svbtle_external_url( $object, $box ) { ?>
+	<?php wp_nonce_field( basename( __FILE__ ), '_wp_svbtle_external_url' ); ?>
+	<p>
+		<input class="widefat" type="text" name="wp_svbtle_external_url" id="wp_svbtle_external_url" value="<?php echo esc_attr( get_post_meta( $object->ID, '_wp_svbtle_external_url', true ) ); ?>" size="30" />
+	</p>
+<?php }
+
+
+function wp_svbtle_post_meta_boxes_setup() {
+	add_action( 'add_meta_boxes', 'wp_svbtle_add_post_meta_boxes' );
+	add_action( 'save_post', 'wp_svbtle_save_post_class_meta', 10, 2 );
+}
+
+function wp_svbtle_add_post_meta_boxes() {
+	add_meta_box(
+		'wp_svbtle_external_url', esc_html__( 'External Url', 'example' ),
+		'wp_svbtle_external_url',
+		'post',
+		'side',
+		'high'
 	);
 }
-endif;
 
-/*	Begin Boilerplate */
-	// Add Admin
-		require_once(TEMPLATEPATH . '/boilerplate-admin/admin-menu.php');
+function wp_svbtle_save_post_class_meta( $post_id, $post ) {
 
-	// remove version info from head and feeds (http://digwp.com/2009/07/remove-wordpress-version-number/)
-		function boilerplate_complete_version_removal() {
-			return '';
-		}
-		add_filter('the_generator', 'boilerplate_complete_version_removal');
-/*	End Boilerplate */
+	if ( !isset( $_POST['_wp_svbtle_external_url'] ) || !wp_verify_nonce( $_POST['_wp_svbtle_external_url'], basename( __FILE__ ) ) )
+		return $post_id;
 
-// change Search Form input type from "text" to "search" and add placeholder text
-	function boilerplate_search_form ( $form ) {
-		$form = '<form role="search" method="get" id="searchform" action="' . home_url( '/' ) . '" >
-		<div><label class="screen-reader-text" for="s">' . __('Search for:') . '</label>
-		<input type="search" placeholder="Search for..." value="' . get_search_query() . '" name="s" id="s" />
-		<input type="submit" id="searchsubmit" value="'. esc_attr__('Search') .'" />
-		</div>
-		</form>';
-		return $form;
-	}
-	add_filter( 'get_search_form', 'boilerplate_search_form' );
+	$post_type = get_post_type_object( $post->post_type );
 
-// added per WP upload process request
-if ( function_exists( 'add_theme_support' ) ) {
-	add_theme_support( 'post-thumbnails' );
+	if ( !current_user_can( $post_type->cap->edit_post, $post_id ) )
+		return $post_id;
+
+	$new_meta_value = ( isset( $_POST['wp_svbtle_external_url'] ) ? esc_url_raw( $_POST['wp_svbtle_external_url'] ) : '' );
+
+	$meta_key = '_wp_svbtle_external_url';
+	$meta_value = get_post_meta( $post_id, $meta_key, true );
+
+	if ( $new_meta_value && '' == $meta_value )
+		add_post_meta( $post_id, $meta_key, $new_meta_value, true );
+	elseif ( $new_meta_value && $new_meta_value != $meta_value )
+		update_post_meta( $post_id, $meta_key, $new_meta_value );
+	elseif ( '' == $new_meta_value && $meta_value )
+		delete_post_meta( $post_id, $meta_key, $meta_value );
 }
 
 
@@ -555,9 +337,10 @@ $perm = get_permalink($post_id);
 $post_keys = array(); $post_val = array();
 $post_keys = get_post_custom_keys($thePostID);
 $is_link = 0;
+
 if (!empty($post_keys)) {
 foreach ($post_keys as $pkey) {
-if ($pkey=='url1' || $pkey=='title_url' || $pkey=='url_title') {
+if ($pkey=='_wp_svbtle_external_url' || $pkey=='_wp_svbtle_external_url' || $pkey=='_wp_svbtle_external_url') {
 $post_val = get_post_custom_values($pkey);
 }
 }
@@ -570,7 +353,164 @@ $is_link = 1;
 } else {
 $link = $perm;
 }
-echo '<a class="is_link_"'.$is_link.'" href="'.$link.'" rel="bookmark" title="'.$title.'">'.$title.'</a>';
+if ($is_link): ?>
+	<a href="<?php echo $link ?>" class="title"><?php echo the_title() ?></a>
+	<a href="<?php echo the_permalink() ?>" class="anchor"><img src="<?php echo get_bloginfo('stylesheet_directory') ?>/images/anchor.svg" class="scalable"></a>
+<?php else: ?>
+	<a href="<?php the_permalink(); ?>" class="no-link" title="<?php printf( esc_attr__( 'Permalink to %s', 'twentyten' ), the_title_attribute( 'echo=0' ) ); ?>" rel="bookmark"><?php the_title(); ?></a>
+
+<?php endif; 
+
 }
 
-?>
+
+if ( ! function_exists( 'wp_svbtle_comment' ) ) :
+
+function wp_svbtle_comment( $comment, $args, $depth ) {
+	$GLOBALS['comment'] = $comment;
+	switch ( $comment->comment_type ) :
+		case 'pingback' :
+		case 'trackback' :
+	?>
+	<li class="post pingback">
+		<p class="row">
+			<strong class="ping-label span1"><?php _e( 'Pingback:', 'the-bootstrap' ); ?></strong>
+			<span class="span7"><?php comment_author_link(); edit_comment_link( __( 'Edit', 'the-bootstrap' ), '<span class="sep">&nbsp;</span><span class="edit-link label">', '</span>' ); ?></span>
+		</p>
+	<?php
+			break;
+		default :
+			$offset	=	$depth - 1;
+			$span	=	7 - $offset;
+	?>
+	<li <?php comment_class(); ?> id="li-comment-<?php comment_ID(); ?>">
+		<article id="comment-<?php comment_ID(); ?>" class="comment row">
+			<div class="comment-author-avatar span1<?php if ($offset) echo " offset{$offset}"; ?>">
+				<?php echo get_avatar( $comment, 70 ); ?>
+			</div>
+			<footer class="comment-meta span<?php echo $span; ?>">
+				<div class="comment-author vcard">
+					<?php
+						/* translators: 1: comment author, 2: date and time */
+						printf( __( '%1$s <span class="says">said</span> on %2$s:', 'the-bootstrap' ),
+							sprintf( '<span class="fn">%s</span>', get_comment_author_link() ),
+							sprintf( '<a href="%1$s"><time pubdate datetime="%2$s">%3$s</time></a>',
+								esc_url( get_comment_link( $comment->comment_ID ) ),
+								get_comment_time( 'c' ),
+								/* translators: 1: date, 2: time */
+								sprintf( __( '%1$s at %2$s', 'the-bootstrap' ), get_comment_date(), get_comment_time() )
+							)
+						);
+						edit_comment_link( __( 'Edit', 'the-bootstrap' ), '<span class="sep">&nbsp;</span><span class="edit-link label">', '</span>' ); ?>
+				</div><!-- .comment-author .vcard -->
+
+				<?php if ( ! $comment->comment_approved ) : ?>
+				<div class="comment-awaiting-moderation alert alert-info"><em><?php _e( 'Your comment is awaiting moderation.', 'the-bootstrap' ); ?></em></div>
+				<?php endif; ?>
+
+			</footer>
+
+			<div class="comment-content span<?php echo $span; ?>">
+				<?php
+				comment_text();
+				comment_reply_link( array_merge( $args, array(
+					'reply_text'	=>	__( 'Reply <span>&darr;</span>', 'the-bootstrap' ),
+					'depth'			=>	$depth,
+					'max_depth'		=>	$args['max_depth']
+				) ) ); ?>
+			</div>
+
+		</article><!-- #comment-<?php comment_ID(); ?> -->
+	<?php
+			break;
+	endswitch;
+}
+endif; // ends check for wp_svbtle_comment()
+
+
+
+function implement_ajax() {
+	global $wpdb;
+
+	$post_id = intval($_POST['article']);
+
+	$kudos = get_post_meta( $post_id , '_wp-svbtle-kudos', true );
+	$new_kudos = $kudos + 1;
+
+	add_post_meta( $post_id, '_wp-svbtle-kudos', 1, true ) or update_post_meta( $post_id, '_wp-svbtle-kudos', $new_kudos );
+
+	header('HTTP/1.1 200 OK');
+
+}
+
+add_action('wp_ajax_my_special_action', 'implement_ajax');
+add_action('wp_ajax_nopriv_my_special_action', 'implement_ajax');//for users that are not logged in.
+
+
+function remove_kudos() {
+	
+	global $wpdb;
+
+	$post_id = intval($_POST['article']);
+
+	$kudos = get_post_meta( $post_id , '_wp-svbtle-kudos', true );
+	$new_kudos = $kudos - 1;
+
+	if ($new_kudos < 0) $new_kudos = 0;
+
+	add_post_meta( $post_id, '_wp-svbtle-kudos', 1, true ) or update_post_meta( $post_id, '_wp-svbtle-kudos', $new_kudos );
+
+	header('HTTP/1.1 200 OK');
+
+}
+
+add_action('wp_ajax_remove_kudos', 'remove_kudos');
+add_action('wp_ajax_nopriv_remove_kudos', 'remove_kudos');//for users that are not logged in.
+
+
+// unregister all default WP Widgets
+function unregister_default_wp_widgets() {
+	unregister_widget('WP_Widget_Calendar');
+	unregister_widget('WP_Widget_Archives');
+	unregister_widget('WP_Widget_Links');
+	unregister_widget('WP_Widget_Meta');
+	unregister_widget('WP_Widget_Categories');
+	unregister_widget('WP_Widget_Recent_Posts');
+	unregister_widget('WP_Widget_Recent_Comments');
+	unregister_widget('WP_Widget_RSS');
+	unregister_widget('WP_Widget_Tag_Cloud');
+}
+add_action('widgets_init', 'unregister_default_wp_widgets', 1);
+
+ 
+add_action('admin_bar_menu', 'add_items',  100);
+function add_items($admin_bar)
+{
+ 	global $post;
+
+    $args = array(
+            'id'    => 'wp-svbtle-editor',
+            'title' => 'wp-svbtle editor',
+            'href'  => get_bloginfo('url') . '/wp-svbtle/',
+            'meta'  => array('title' => __('wp-svbtle editor'))
+            );
+ 
+ 	if (is_single() or is_page()) {
+ 		$args['href'] = get_bloginfo('url') . '/wp-svbtle/index.php?page=edit&id='.$post->ID;
+ 		$args['title'] = 'Edit post with wp-svbtle';
+ 	}
+
+    //This is where the magic works.
+    $admin_bar->add_menu( $args);
+}
+
+// Modifying the Comment Call before and after comment_form gets called in comments.php
+add_action('comment_form_before','svbtle_comment_form_before');
+add_action('comment_form_after','svbtle_comment_form_after');
+function svbtle_comment_form_before() {
+ echo '<div class="comments">';
+ }
+
+ function svbtle_comment_form_after() {
+ echo '</div>';
+ }

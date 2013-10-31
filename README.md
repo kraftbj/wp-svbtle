@@ -1,29 +1,42 @@
 # wp-svbtle
-#### Wordpress admin & Theme inspired by svbtle.com. [Follow me on twitter][].
+#### Wordpress admin & Theme inspired by svbtle.com. [Follow me on twitter](http://twitter.com/gravityonmars)
 
-  [Follow us on twitter]: http://twitter.com/gravityonmars
+[View Demo][]
+
+  [View Demo]: http://wp-svbtle.themeskult.com/
+  
 ## Installation
 1. Move the folder wp-content/themes/svbltle into wp-content/themes/
 2. Enable the theme from the admin panel
 3. Move wp-svbtle to the root of your wordpress installation.
 4. Log in to yourdomain.com/wp-svbtle for a new blogging experience!
 
+Admin area & theme are 100% independent from each other! 
+
 ## Screenshots 
+
+![][3]
 
 ![][1]
 
 ![][2]
 
-![][3]
+![][4]
 
+![][5]
+
+ [3]: https://github.com/gravityonmars/wp-svbtle/raw/master/wp-svbtle/screenshot-3.png
  [1]: https://github.com/gravityonmars/wp-svbtle/raw/master/wp-svbtle/screenshot-1.png
  [2]: https://github.com/gravityonmars/wp-svbtle/raw/master/wp-svbtle/screenshot-2.png
- [3]: https://github.com/gravityonmars/wp-svbtle/raw/master/wp-svbtle/screenshot-3.png
+ [4]: https://github.com/gravityonmars/wp-svbtle/raw/master/wp-svbtle/screenshot-4.png
+ [5]: https://github.com/gravityonmars/wp-svbtle/raw/master/wp-svbtle/screenshot-5.png
 
+## FAQ 
 
-## Todo
-* Add external links to post title.
-* Autosave 
+### Isn't this unoriginal?
+Yes, in the same way svbtle is unoriginal. [See the original][] ["inspiration" for svbtle].
+
+[See the original]: https://news.ycombinator.com/item?id=4405331
 
 ## License 
 
